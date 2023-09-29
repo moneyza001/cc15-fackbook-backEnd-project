@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { registerSchema, loginSchema } = require("../validators/auth-validator");
 const prisma = require("../model/prisma");
-const createError = require("../utils/createError");
+const createError = require("../utils/createError.js");
 
 exports.register = async (req, res, next) => {
     try {
@@ -60,4 +60,8 @@ exports.login = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+exports.getMe = (req, res, next) => {
+    res.status(200).json({ user: req.user });
 };
