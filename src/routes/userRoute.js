@@ -13,7 +13,9 @@ router.patch(
         { name: "profileImage", maxCount: 1 },
         { name: "coverImage", maxCount: 1 },
     ]),
-    userController.updateProflie
+    userController.updateProfile
 );
+
+router.get("/:userId", authenticateMiddleware, userController.getUserById);
 
 module.exports = router;
