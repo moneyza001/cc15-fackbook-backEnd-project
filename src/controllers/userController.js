@@ -4,6 +4,76 @@ const createError = require("../utils/createError");
 const { upload } = require("../utils/cloudinayService");
 const prisma = require("../model/prisma");
 const { checkUserIdSchema } = require("../validators/userValidater");
+const {
+    AUTH_USER,
+    UNKNOW,
+    STATUS_ACCEPTED,
+    FRIEND,
+    REQUESTER,
+    RECEIVER,
+} = require("../config/constant");
+
+const getTargetUserStatusWithAythUserId = async (targetUserId, authUserId) => {
+    if (targetUserId === authUserId) {
+        return AUTH_USER;
+    }
+    const relationship = await prisma.friend.findFirst({
+        where: {
+            OR: [
+                { requesterId: targetUserId, receiverId: authUserId },
+                { requesterId: authUserId, receiverId: targetUserId },
+            ],
+        },
+    });
+    if (!relationship) {
+        return UNKNOW;
+    }
+    if (relationship.status === STATUS_ACCEPTED) {
+        return FRIEND;
+    }
+    if (relationship.requesterId === authUserId) {
+        return REQUESTER;
+    }
+
+    return RECEIVER;
+};
+
+const getTargetUserFriend = async (targetUserId) => {
+    const relationships = await prisma.friend.findMany({
+        where: {
+            status: STATUS_ACCEPTED,
+            OR: [{ receiverId: targetUserId }, { requesterId: targetUserId }],
+        },
+        select: {
+            requester: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    mobile: true,
+                    profileImage: true,
+                    coverImage: true,
+                },
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    mobile: true,
+                    profileImage: true,
+                    coverImage: true,
+                },
+            },
+        },
+    });
+    const friends = relationships.map((el) =>
+        el.requester.id === targetUserId ? el.receiver : el.requester
+    );
+    return friends;
+};
 
 exports.updateProfile = async (req, res, next) => {
     //promise.all *******************
@@ -63,10 +133,18 @@ exports.getUserById = async (req, res, next) => {
                 id: userId,
             },
         });
+        let status = null;
+        let friends = null;
         if (user) {
             delete user.password;
+            status = await getTargetUserStatusWithAythUserId(
+                userId,
+                req.user.id
+            );
+            friends = await getTargetUserFriend(userId);
         }
-        res.status(200).json({ user });
+
+        res.status(200).json({ user, status, friends });
     } catch (error) {
         next(error);
     }

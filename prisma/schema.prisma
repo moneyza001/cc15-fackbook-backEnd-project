@@ -68,5 +68,5 @@ model Friend {
 
 enum FriendStatus {
   ACCEPTED
-  PENNING
+  PENDING
 }
